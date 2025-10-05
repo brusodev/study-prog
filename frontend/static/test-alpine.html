@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Alpine</title>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body>
+  <h1>Alpine Test</h1>
+  
+  <button onclick="openTestModal()">Open Modal</button>
+  
+  <div id="test-modal" x-data="testModal()" x-show="open" x-cloak>
+    <h2>Modal is OPEN!</h2>
+    <p x-text="message"></p>
+    <button @click="close()">Close</button>
+  </div>
+  
+  <script>
+    window.testModal = function() {
+      return {
+        open: false,
+        message: 'Hello from Alpine!',
+        close() {
+          this.open = false;
+        }
+      }
+    };
+    
+    function openTestModal() {
+      const modal = document.getElementById('test-modal');
+      console.log('Modal element:', modal);
+      console.log('Modal __x:', modal.__x);
+      
+      if (modal.__x) {
+        modal.__x.$data.open = true;
+        console.log('✅ Modal opened!');
+      } else {
+        console.error('❌ Alpine not initialized');
+      }
+    }
+  </script>
+  
+  <script src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
+  
+  <script>
+    setTimeout(() => {
+      const modal = document.getElementById('test-modal');
+      console.log('After 1s - Modal __x:', modal.__x);
+    }, 1000);
+  </script>
+</body>
+</html>

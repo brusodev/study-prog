@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test FullCalendar</title>
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+</head>
+<body>
+  <h1>FullCalendar Test</h1>
+  <div id="calendar"></div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('FullCalendar:', typeof FullCalendar);
+      
+      if (typeof FullCalendar === 'undefined') {
+        console.error('FullCalendar NOT LOADED!');
+        document.body.innerHTML += '<p style="color:red;">FullCalendar NOT LOADED!</p>';
+      } else {
+        console.log('FullCalendar LOADED!');
+        document.body.innerHTML += '<p style="color:green;">FullCalendar LOADED!</p>';
+        
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth'
+        });
+        calendar.render();
+      }
+    });
+  </script>
+</body>
+</html>

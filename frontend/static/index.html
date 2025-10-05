@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Study Planner - organize seus estudos com calendário e gráficos" />
+  <title>Study Planner - Planejamento de Estudos</title>
+  
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Ctext x='50' y='65' font-size='60' text-anchor='middle' fill='%23fff' font-family='Arial, Helvetica, sans-serif'%3ES%3C/text%3E%3C/svg%3E">
+
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FullCalendar v6 (Bundle completo) -->
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    #calendar { min-height: 560px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .tab-btn.active { background-color: #dbeafe; color: #1d4ed8; font-weight: 600; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header com Navegação -->
+  <header class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-blue-600">📚 Study Planner</h1>
+        <nav class="flex gap-4">
+          <button onclick="showTab('calendar')" id="tab-calendar" class="tab-btn px-4 py-2 rounded font-medium bg-blue-100 text-blue-700">Calendário</button>
+          <button onclick="showTab('subjects')" id="tab-subjects" class="tab-btn px-4 py-2 rounded font-medium text-gray-600 hover:bg-gray-100">Matérias</button>
+          <button onclick="showTab('schedule')" id="tab-schedule" class="tab-btn px-4 py-2 rounded font-medium text-gray-600 hover:bg-gray-100">Cronograma</button>
+          <button onclick="showTab('stats')" id="tab-stats" class="tab-btn px-4 py-2 rounded font-medium text-gray-600 hover:bg-gray-100">Estatísticas</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    
+    <!-- TAB: Calendário -->
+    <div id="content-calendar" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white p-4 rounded-lg shadow">
+          <div id="calendar" class="w-full" aria-label="Calendário de estudos"></div>
+        </div>
+        <div class="space-y-6">
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-3">Horas por Dia (7 dias)</h2>
+            <canvas id="dailyChart" height="200"></canvas>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-3">Resumo Rápido</h2>
+            <div id="quick-stats" class="space-y-2 text-sm">
+              <div class="flex justify-between"><span>Total de eventos:</span><span id="total-events" class="font-bold">0</span></div>
+              <div class="flex justify-between"><span>Horas esta semana:</span><span id="week-hours" class="font-bold">0h</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Matérias -->
+    <div id="content-subjects" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold">Gerenciar Matérias</h2>
+          <button onclick="openModal('subject-modal')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ Nova Matéria</button>
+        </div>
+        <div id="subjects-list" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Cronograma Semanal -->
+    <div id="content-schedule" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold">Cronograma Semanal</h2>
+          <div class="flex gap-2">
+            <button onclick="openModal('schedule-modal')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ Adicionar Horário</button>
+            <button onclick="generateEvents()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Gerar Eventos (4 semanas)</button>
+          </div>
+        </div>
+        <div id="schedule-grid" class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="border p-2">Dia</th>
+                <th class="border p-2">Matéria</th>
+                <th class="border p-2">Horário</th>
+                <th class="border p-2">Ativo</th>
+                <th class="border p-2">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Estatísticas -->
+    <div id="content-stats" class="tab-content hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-lg font-semibold mb-4">Horas por Matéria (30 dias)</h2>
+          <canvas id="subjectHoursChart" height="250"></canvas>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-lg font-semibold mb-4">Eventos por Matéria</h2>
+          <canvas id="subjectCountChart" height="250"></canvas>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow md:col-span-2">
+          <h2 class="text-lg font-semibold mb-4">Horas de Estudo (Últimos 14 dias)</h2>
+          <div style="position: relative; height: 200px;">
+            <canvas id="daily14Chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+
+  <!-- Modal: Evento -->
+  <div id="event-modal" class="hidden fixed inset-0 flex items-center justify-center bg-black/40 z-50" role="dialog" aria-modal="true">
+    <div class="bg-white w-full max-w-md p-6 rounded-lg shadow-xl">
+      <h3 id="event-modal-title" class="font-bold text-xl mb-4">Novo Evento</h3>
+      <input type="hidden" id="event-id" value="">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Título</label>
+          <input id="event-title" class="w-full border rounded p-2" placeholder="Título do evento"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Matéria</label>
+          <input id="event-subject" class="w-full border rounded p-2" placeholder="Ex: Matemática"/>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-sm font-medium mb-1">Início</label>
+            <input id="event-start" type="datetime-local" class="w-full border rounded p-2"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Fim</label>
+            <input id="event-end" type="datetime-local" class="w-full border rounded p-2"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Cor</label>
+          <input id="event-color" type="color" value="#3b82f6" class="w-full border rounded p-2 h-10"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Descrição</label>
+          <textarea id="event-description" class="w-full border rounded p-2" rows="2" placeholder="Descrição opcional"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button type="button" onclick="closeModal('event-modal')" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+        <button type="button" onclick="saveEvent()" id="event-save-btn" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Criar</button>
+        <button type="button" onclick="deleteEvent()" id="event-delete-btn" class="hidden px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Matéria (Pure JS - No Alpine) -->
+  <div id="subject-modal" class="hidden fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+    <div class="bg-white w-full max-w-md p-6 rounded-lg shadow-xl">
+      <h3 id="subject-modal-title" class="font-bold text-xl mb-4">Nova Matéria</h3>
+      <input type="hidden" id="subject-id" value="">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Nome da Matéria</label>
+          <input id="subject-name" type="text" class="w-full border rounded p-2" placeholder="Ex: Matemática"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Cor</label>
+          <input id="subject-color" type="color" value="#3b82f6" class="w-full border rounded p-2 h-10"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Descrição</label>
+          <textarea id="subject-description" class="w-full border rounded p-2" rows="2" placeholder="Descrição opcional"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button type="button" onclick="closeModal('subject-modal')" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+        <button type="button" onclick="saveSubject()" id="subject-save-btn" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Criar</button>
+        <button type="button" onclick="deleteSubject()" id="subject-delete-btn" class="hidden px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cronograma -->
+  <div id="schedule-modal" class="hidden fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+    <div class="bg-white w-full max-w-md p-6 rounded-lg shadow-xl">
+      <h3 id="schedule-modal-title" class="font-bold text-xl mb-4">Novo Horário</h3>
+      <input type="hidden" id="schedule-id" value="">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Matéria</label>
+          <select id="schedule-subject" class="w-full border rounded p-2">
+            <option value="">Selecione uma matéria</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Dia da Semana</label>
+          <select id="schedule-day" class="w-full border rounded p-2">
+            <option value="0">Segunda-feira</option>
+            <option value="1">Terça-feira</option>
+            <option value="2">Quarta-feira</option>
+            <option value="3">Quinta-feira</option>
+            <option value="4">Sexta-feira</option>
+            <option value="5">Sábado</option>
+            <option value="6">Domingo</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-sm font-medium mb-1">Início</label>
+            <input id="schedule-start" type="time" class="w-full border rounded p-2"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Fim</label>
+            <input id="schedule-end" type="time" class="w-full border rounded p-2"/>
+          </div>
+        </div>
+        <div>
+          <label class="flex items-center gap-2">
+            <input id="schedule-active" type="checkbox" checked class="rounded"/>
+            <span class="text-sm font-medium">Ativo</span>
+          </label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button type="button" onclick="closeModal('schedule-modal')" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+        <button type="button" onclick="saveSchedule()" id="schedule-save-btn" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Criar</button>
+        <button type="button" onclick="deleteSchedule()" id="schedule-delete-btn" class="hidden px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Excluir</button>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+
+  <!-- Alpine Modal Functions - MUST be defined BEFORE Alpine loads -->
+  <script>
+    // These functions MUST be global for Alpine to find them
+    window.eventModal = function() {
+      return {
+        open: false,
+        editId: null,
+        form: {
+          title: '',
+          subject: '',
+          start: '',
+          end: '',
+          color: '#3b82f6',
+          description: ''
+        },
+        openFor(dateStr) {
+          this.reset();
+          if (!dateStr) {
+            this.form.start = '';
+            this.form.end = '';
+          } else if (dateStr.includes('T')) {
+            const d = new Date(dateStr);
+            if (!isNaN(d)) {
+              this.form.start = d.toISOString().slice(0, 16);
+              const d2 = new Date(d.getTime() + 60 * 60 * 1000);
+              this.form.end = d2.toISOString().slice(0, 16);
+            } else {
+              this.form.start = '';
+              this.form.end = '';
+            }
+          } else {
+            this.form.start = dateStr + "T09:00";
+            this.form.end = dateStr + "T10:00";
+          }
+          this.open = true;
+        },
+        fillFromEvent(e) {
+          this.editId = e.id;
+          this.form.title = e.title || '';
+          this.form.subject = e.extendedProps?.subject || '';
+          this.form.start = e.start ? e.start.toISOString().slice(0, 16) : '';
+          this.form.end = e.end ? e.end.toISOString().slice(0, 16) : '';
+          this.form.color = e.extendedProps?.color || e.backgroundColor || '#3b82f6';
+          this.form.description = e.extendedProps?.description || '';
+          this.open = true;
+        },
+        reset() {
+          this.editId = null;
+          this.form = { title: '', subject: '', start: '', end: '', color: '#3b82f6', description: '' };
+        },
+        close() { this.open = false; this.reset(); },
+        async save() {
+          try {
+            const payload = {
+              title: this.form.title,
+              subject: this.form.subject,
+              start: new Date(this.form.start).toISOString(),
+              end: this.form.end ? new Date(this.form.end).toISOString() : null,
+              color: this.form.color,
+              description: this.form.description
+            };
+            if (this.editId) {
+              await axios.put(`/api/events/${this.editId}`, payload);
+            } else {
+              await axios.post('/api/events', payload);
+            }
+            if (window.calendar) window.calendar.refetchEvents();
+            if (window.loadDailyChart) window.loadDailyChart();
+            if (window.loadQuickStats) window.loadQuickStats();
+            this.close();
+          } catch (e) { console.error(e); alert('Erro ao salvar evento'); }
+        },
+        async remove() {
+          if (!this.editId) return;
+          if (!confirm('Excluir evento?')) return;
+          await axios.delete(`/api/events/${this.editId}`);
+          if (window.calendar) window.calendar.refetchEvents();
+          if (window.loadDailyChart) window.loadDailyChart();
+          if (window.loadQuickStats) window.loadQuickStats();
+          this.close();
+        }
+      }
+    };
+
+    window.subjectModal = function() {
+      return {
+        open: false,
+        editId: null,
+        form: {
+          name: '',
+          color: '#3b82f6',
+          description: ''
+        },
+        reset() {
+          this.editId = null;
+          this.form = { name: '', color: '#3b82f6', description: '' };
+        },
+        close() { this.open = false; this.reset(); },
+        async save() {
+          try {
+            if (!this.form.name || this.form.name.trim() === '') {
+              alert('Por favor, preencha o nome da matéria');
+              return;
+            }
+            
+            const payload = {
+              name: this.form.name,
+              color: this.form.color,
+              description: this.form.description || ''
+            };
+            
+            if (this.editId) {
+              await axios.put(`/api/subjects/${this.editId}`, payload);
+            } else {
+              await axios.post('/api/subjects', payload);
+            }
+            if (window.loadSubjects) window.loadSubjects();
+            this.close();
+          } catch (e) { 
+            console.error('Error saving subject:', e); 
+            alert('Erro ao salvar matéria: ' + (e.response?.data?.detail || e.message));
+          }
+        },
+        async remove() {
+          if (!this.editId) return;
+          if (!confirm('Excluir matéria?')) return;
+          try {
+            await axios.delete(`/api/subjects/${this.editId}`);
+            if (window.loadSubjects) window.loadSubjects();
+            this.close();
+          } catch (e) {
+            console.error('Error deleting subject:', e);
+            alert('Erro ao excluir matéria: ' + (e.response?.data?.detail || e.message));
+          }
+        }
+      }
+    };
+
+    window.scheduleModal = function() {
+      return {
+        open: false,
+        editId: null,
+        subjects: [],
+        form: {
+          subject_id: '',
+          day_of_week: 0,
+          start_time: '09:00',
+          end_time: '10:00',
+          active: true
+        },
+        async init() {
+          const res = await axios.get('/api/subjects');
+          this.subjects = res.data;
+        },
+        reset() {
+          this.editId = null;
+          this.form = { subject_id: '', day_of_week: 0, start_time: '09:00', end_time: '10:00', active: true };
+        },
+        close() { this.open = false; this.reset(); },
+        async save() {
+          try {
+            const payload = {
+              subject_id: parseInt(this.form.subject_id),
+              day_of_week: parseInt(this.form.day_of_week),
+              start_time: this.form.start_time,
+              end_time: this.form.end_time,
+              active: this.form.active
+            };
+            if (this.editId) {
+              await axios.put(`/api/schedules/${this.editId}`, payload);
+            } else {
+              await axios.post('/api/schedules', payload);
+            }
+            if (window.loadSchedules) window.loadSchedules();
+            this.close();
+          } catch (e) { console.error(e); alert('Erro ao salvar horário'); }
+        },
+        async remove() {
+          if (!this.editId) return;
+          if (!confirm('Excluir horário?')) return;
+          await axios.delete(`/api/schedules/${this.editId}`);
+          if (window.loadSchedules) window.loadSchedules();
+          this.close();
+        }
+      }
+    };
+  </script>
+
+  <!-- Load app.js -->
+  <script src="/static/app.js"></script>
+
+</body>
+</html>
