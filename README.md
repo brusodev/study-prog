@@ -22,10 +22,13 @@
 - Geração automática de eventos recorrentes
 
 ### ✅ Calendário Interativo
-- Visualização mensal completa
-- Criação rápida de eventos clicando em datas
-- Edição de eventos existentes
+- Visualização mensal completa com até 6 eventos por dia
+- **Exibe nome da matéria como título principal** (mais intuitivo para estudos)
+- Criação rápida de eventos clicando em datas (horários ilimitados por dia)
+- Edição de eventos existentes com clique duplo
 - Cores personalizadas por matéria
+- Popup com todos os eventos ao clicar em "+X more"
+- Várias visões: mensal, semanal e diária
 - Integração em tempo real com o backend
 
 ### ✅ Dashboard de Estatísticas
@@ -39,25 +42,51 @@
 
 ## 🚀 Como Usar
 
-### 1. Instalação
+### Opção 1: Script Automático (Recomendado)
+
+#### No Linux/Mac:
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+#### No Windows:
+1. **Com Git Bash** (recomendado):
+   ```bash
+   ./run.sh
+   ```
+
+2. **Com PowerShell** (se Git Bash não estiver disponível):
+   ```powershell
+   # Execute os comandos manualmente:
+   pip install -r requirements.txt
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+3. **Com WSL** (Windows Subsystem for Linux):
+   ```bash
+   chmod +x run.sh
+   ./run.sh
+   ```
+
+### Opção 2: Execução Manual
 
 ```bash
 # Instale as dependências
 pip install -r requirements.txt
-```
 
-### 2. Iniciar o Servidor
-
-```bash
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Inicie o servidor
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 3. Acessar o Sistema
 
 Abra seu navegador em:
 ```
-http://localhost:8000/static/index.html
+http://localhost:8000
 ```
+
+**Nota:** O frontend é servido automaticamente na raiz do servidor.
 
 ---
 
@@ -139,6 +168,43 @@ study-prog/
 - **[REFATORACAO.md](REFATORACAO.md)** - Detalhes da migração Alpine.js → Pure JS
 - **[RESUMO_FINAL.md](RESUMO_FINAL.md)** - Overview executivo do projeto
 - **[CHECKLIST_TESTES.md](CHECKLIST_TESTES.md)** - Guia de validação e testes
+
+---
+
+## 🔧 Correções Recentes (v2.0.1)
+
+### ✅ Erro ao salvar eventos no calendário
+**Problema**: "Erro ao salvar evento" ao clicar em datas do calendário  
+**Causa**: Falha na conversão de datas ISO string → datetime  
+**Solução**: 
+- Adicionado campo `allDay` obrigatório no payload
+- Conversão manual de strings ISO no backend
+- Validação aprimorada de campos obrigatórios
+- Logs de debug para troubleshooting
+
+### ✅ Problemas de horário (19:30 → 01:30)
+**Problema**: Horários estavam sendo alterados devido a conversões incorretas de timezone  
+**Causa**: `toISOString()` convertia datas locais para UTC desnecessariamente  
+**Solução**: 
+- Removido `toISOString()` do modal de edição
+- Envio direto das strings do input datetime-local
+- Backend trata strings sem segundos (adiciona :00 automaticamente)
+- FullCalendar configurado com `timeZone: 'local'`
+
+### ✅ Matérias não carregavam no modal de cronograma
+**Problema**: Dropdown vazio ao criar novo horário  
+**Causa**: Função JavaScript duplicada causando conflitos  
+**Solução**: Remoção de função duplicada + delay de carregamento
+
+### ✅ Loops infinitos nos gráficos de estatísticas
+**Problema**: CPU alta e interface congelada  
+**Causa**: Configuração incorreta do Chart.js (`maintainAspectRatio`)  
+**Solução**: Flags de loading + `maintainAspectRatio: false`
+
+### ✅ Alpine.js falhas de inicialização
+**Problema**: `__x is not defined`, componentes não funcionavam  
+**Causa**: Conflitos de carregamento e configuração complexa  
+**Solução**: Migração completa para JavaScript puro
 
 ---
 

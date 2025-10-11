@@ -17,11 +17,57 @@ def list_events(start: str = None, end: str = None, session: Session = Depends(g
     return session.exec(select(Event)).all()
 
 @router.post("/events", response_model=Event)
-def create_event(event: EventCreate, session: Session = Depends(get_session)):
-    db_event = Event.from_orm(event)
+def create_event(event: dict, session: Session = Depends(get_session)):
+    print(f"📥 Received raw event data: {event}")
+
+    # Convert string dates to datetime objects
+    from datetime import datetime
+    event_data = event.copy()
+
+    if 'start' in event_data and isinstance(event_data['start'], str):
+        try:
+            original_start = event_data['start']
+            # Tratar strings do input datetime-local que podem não ter segundos
+            start_str = event_data['start']
+            if 'T' in start_str and start_str.count(':') == 1:
+                start_str += ':00'  # Adicionar segundos se não houver
+            parsed_start = datetime.fromisoformat(start_str)
+            event_data['start'] = parsed_start
+            print(f"🔄 Start conversion: '{original_start}' -> {parsed_start} (ISO: {parsed_start.isoformat()})")
+        except ValueError as e:
+            print(f"❌ Error parsing start date: {e}")
+            raise HTTPException(status_code=400, detail=f"Invalid start date format: {event_data['start']}")
+
+    if 'end' in event_data and event_data['end'] and isinstance(event_data['end'], str):
+        try:
+            original_end = event_data['end']
+            end_str = event_data['end']
+            if 'T' in end_str and end_str.count(':') == 1:
+                end_str += ':00'
+            parsed_end = datetime.fromisoformat(end_str)
+            event_data['end'] = parsed_end
+            print(f"🔄 End conversion: '{original_end}' -> {parsed_end} (ISO: {parsed_end.isoformat()})")
+        except ValueError as e:
+            print(f"❌ Error parsing end date: {e}")
+            raise HTTPException(status_code=400, detail=f"Invalid end date format: {event_data['end']}")
+
+    # Create EventCreate object
+    try:
+        event_create = EventCreate(**event_data)
+        print(f"✅ Created EventCreate: {event_create}")
+        print(f"   Start: {event_create.start} (ISO: {event_create.start.isoformat() if event_create.start else None})")
+    except Exception as e:
+        print(f"❌ Error creating EventCreate: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid event data: {str(e)}")
+
+    db_event = Event.from_orm(event_create)
+    print(f"📤 Created db_event: {db_event}")
+    print(f"   DB Start: {db_event.start} (ISO: {db_event.start.isoformat() if db_event.start else None})")
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
+    print(f"✅ Saved event: {db_event}")
+    print(f"   Final Start: {db_event.start} (ISO: {db_event.start.isoformat() if db_event.start else None})")
     return db_event
 
 @router.put("/events/{event_id}", response_model=Event)

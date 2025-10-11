@@ -147,14 +147,23 @@ window.saveEvent = async function() {
   }
   
   try {
+    // Enviar datas diretamente como strings ISO sem conversão extra
     const payload = {
       title,
-      subject: subject || '',
-      start: new Date(start).toISOString(),
-      end: end ? new Date(end).toISOString() : null,
+      start: start, // Já vem como string do input datetime-local
+      end: end || null, // Já vem como string do input datetime-local
+      allDay: false,
       color,
       description: description || ''
     };
+    
+    // Só incluir subject se não estiver vazio
+    if (subject && subject.trim() !== '') {
+      payload.subject = subject.trim();
+    }
+    
+    console.log('📤 Enviando payload:', payload);
+    console.log('🔗 URL:', id ? `/api/events/${id}` : '/api/events');
     
     if (id) {
       await axios.put(`/api/events/${id}`, payload);
@@ -210,29 +219,93 @@ window.openEventModal = function(dateStr) {
   
   // Set dates based on dateStr
   if (!dateStr) {
-    document.getElementById('event-start').value = '';
-    document.getElementById('event-end').value = '';
+    const now = new Date();
+    const startStr = now.getFullYear() + '-' + 
+                     String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                     String(now.getDate()).padStart(2, '0') + 'T' + 
+                     String(now.getHours()).padStart(2, '0') + ':' + 
+                     String(now.getMinutes()).padStart(2, '0');
+    const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+    const endStr = endTime.getFullYear() + '-' + 
+                   String(endTime.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(endTime.getDate()).padStart(2, '0') + 'T' + 
+                   String(endTime.getHours()).padStart(2, '0') + ':' + 
+                   String(endTime.getMinutes()).padStart(2, '0');
+    document.getElementById('event-start').value = startStr;
+    document.getElementById('event-end').value = endStr;
   } else if (dateStr.includes('T')) {
+    // Already has time
     const d = new Date(dateStr);
     if (!isNaN(d)) {
-      document.getElementById('event-start').value = d.toISOString().slice(0, 16);
+      const startStr = d.getFullYear() + '-' + 
+                       String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(d.getDate()).padStart(2, '0') + 'T' + 
+                       String(d.getHours()).padStart(2, '0') + ':' + 
+                       String(d.getMinutes()).padStart(2, '0');
       const d2 = new Date(d.getTime() + 60 * 60 * 1000);
-      document.getElementById('event-end').value = d2.toISOString().slice(0, 16);
+      const endStr = d2.getFullYear() + '-' + 
+                     String(d2.getMonth() + 1).padStart(2, '0') + '-' + 
+                     String(d2.getDate()).padStart(2, '0') + 'T' + 
+                     String(d2.getHours()).padStart(2, '0') + ':' + 
+                     String(d2.getMinutes()).padStart(2, '0');
+      document.getElementById('event-start').value = startStr;
+      document.getElementById('event-end').value = endStr;
+    } else {
+      // Fallback to current time
+      const now = new Date();
+      const startStr = now.getFullYear() + '-' + 
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(now.getDate()).padStart(2, '0') + 'T' + 
+                       String(now.getHours()).padStart(2, '0') + ':' + 
+                       String(now.getMinutes()).padStart(2, '0');
+      const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+      const endStr = endTime.getFullYear() + '-' + 
+                     String(endTime.getMonth() + 1).padStart(2, '0') + '-' + 
+                     String(endTime.getDate()).padStart(2, '0') + 'T' + 
+                     String(endTime.getHours()).padStart(2, '0') + ':' + 
+                     String(endTime.getMinutes()).padStart(2, '0');
+      document.getElementById('event-start').value = startStr;
+      document.getElementById('event-end').value = endStr;
     }
   } else {
-    document.getElementById('event-start').value = dateStr + "T09:00";
-    document.getElementById('event-end').value = dateStr + "T10:00";
+    // Only date, add default time
+    const startStr = dateStr + "T09:00";
+    const endStr = dateStr + "T10:00";
+    document.getElementById('event-start').value = startStr;
+    document.getElementById('event-end').value = endStr;
   }
+  
+  console.log('🗓️ Event modal opened with start:', document.getElementById('event-start').value);
 }
 
 window.openEventModalForEdit = function(event) {
   openModal('event-modal');
   
   document.getElementById('event-id').value = event.id;
-  document.getElementById('event-title').value = event.title || '';
+  document.getElementById('event-title').value = event.extendedProps?.originalTitle || event.title || '';
   document.getElementById('event-subject').value = event.extendedProps?.subject || '';
-  document.getElementById('event-start').value = event.start ? event.start.toISOString().slice(0, 16) : '';
-  document.getElementById('event-end').value = event.end ? event.end.toISOString().slice(0, 16) : '';
+  
+  // Formatar datas locais sem conversão para UTC
+  if (event.start) {
+    const startDate = new Date(event.start);
+    const startStr = startDate.getFullYear() + '-' + 
+                     String(startDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                     String(startDate.getDate()).padStart(2, '0') + 'T' + 
+                     String(startDate.getHours()).padStart(2, '0') + ':' + 
+                     String(startDate.getMinutes()).padStart(2, '0');
+    document.getElementById('event-start').value = startStr;
+  }
+  
+  if (event.end) {
+    const endDate = new Date(event.end);
+    const endStr = endDate.getFullYear() + '-' + 
+                   String(endDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(endDate.getDate()).padStart(2, '0') + 'T' + 
+                   String(endDate.getHours()).padStart(2, '0') + ':' + 
+                   String(endDate.getMinutes()).padStart(2, '0');
+    document.getElementById('event-end').value = endStr;
+  }
+  
   document.getElementById('event-color').value = event.extendedProps?.color || event.backgroundColor || '#3b82f6';
   document.getElementById('event-description').value = event.extendedProps?.description || '';
   
@@ -388,12 +461,15 @@ function initCalendar() {
     initialView: 'dayGridMonth',
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
     locale: 'pt-br',
+    timeZone: 'local', // Garantir que use timezone local
+    dayMaxEvents: 6, // Mostrar até 6 eventos por dia na visão mensal
+    moreLinkClick: 'popover', // Mostrar popup com todos os eventos ao clicar em "+X more"
     events: function (info, successCallback, failureCallback) {
       axios.get('/api/events')
         .then(response => {
           const events = response.data.map(e => ({
             id: e.id,
-            title: e.title,
+            title: e.subject || e.title, // Mostrar matéria como título principal
             start: e.start,
             end: e.end,
             allDay: e.allDay || false,
@@ -401,6 +477,7 @@ function initCalendar() {
             borderColor: e.color || '#3b82f6',
             extendedProps: {
               subject: e.subject,
+              originalTitle: e.title, // Guardar título original
               description: e.description,
               color: e.color
             }
