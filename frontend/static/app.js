@@ -3,6 +3,12 @@ let calendar;
 let charts = {};
 let statsChartsLoaded = false;
 
+// ============= MOBILE MENU =============
+window.toggleMobileMenu = function() {
+  const menu = document.getElementById('mobile-menu');
+  menu.classList.toggle('hidden');
+};
+
 // ============= SIMPLE MODAL SYSTEM (No Alpine) =============
 const modals = {
   event: { open: false, editId: null, form: {} },
@@ -407,6 +413,10 @@ function updateScheduleSelectOptions() {
 
 // ============= TABS =============
 window.showTab = function(tabName) {
+  // Hide mobile menu
+  const mobileMenu = document.getElementById('mobile-menu');
+  if (mobileMenu) mobileMenu.classList.add('hidden');
+  
   // Hide all content
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
   // Remove active from all buttons
@@ -459,7 +469,11 @@ function initCalendar() {
 
   window.calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
-    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+    headerToolbar: { 
+      left: 'prev,next today', 
+      center: 'title', 
+      right: 'dayGridMonth,timeGridWeek' // Removido timeGridDay para simplificar
+    },
     locale: 'pt-br',
     timeZone: 'local', // Garantir que use timezone local
     dayMaxEvents: 6, // Mostrar até 6 eventos por dia na visão mensal
@@ -529,7 +543,7 @@ window.loadSubjects = async function() {
         <div class="flex gap-2">
           <button 
             onclick="editSubject(${s.id}, '${s.name.replace(/'/g, "\\'")}', '${s.color}', '${(s.description || '').replace(/'/g, "\\'")}')"
-            class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+            class="btn-small bg-blue-100 text-blue-700 hover:bg-blue-200">
             Editar
           </button>
         </div>
@@ -581,7 +595,7 @@ window.loadSchedules = async function() {
         <td class="border p-2">
           <button 
             onclick="editSchedule(${s.id}, ${s.subject_id}, ${s.day_of_week}, '${s.start_time}', '${s.end_time}', ${s.active})"
-            class="px-2 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+            class="btn-small bg-blue-100 text-blue-700 hover:bg-blue-200">
             Editar
           </button>
         </td>

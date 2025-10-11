@@ -10,6 +10,12 @@
 
 ## 🎯 Funcionalidades
 
+### ✅ Interface Responsiva
+- **Totalmente otimizada para mobile** com menu hambúrguer e layout adaptativo
+- Modais responsivos com scroll e botões reorganizados para telas pequenas
+- Calendário com altura ajustada automaticamente para diferentes dispositivos
+- Navegação touch-friendly com botões maiores em mobile
+
 ### ✅ Gestão de Matérias
 - Cadastro de matérias com nome, cor personalizada e descrição
 - Edição e exclusão de matérias
