@@ -30,10 +30,10 @@ echo "✅ Dependências instaladas com sucesso!"
 
 # Iniciar o servidor
 echo "🌐 Iniciando servidor FastAPI..."
-echo "📱 Frontend disponível em: http://localhost:8000"
-echo "📚 API docs disponível em: http://localhost:8000/docs"
+echo "📱 Frontend disponível em: http://localhost:8100"
+echo "📚 API docs disponível em: http://localhost:8100/docs"
 echo ""
 echo "Pressione Ctrl+C para parar o servidor"
 echo ""
 
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8100
