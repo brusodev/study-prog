@@ -453,8 +453,19 @@ function updateEventSelectOptions() {
     const opt = document.createElement('option');
     opt.value = s.name;
     opt.textContent = s.name;
+    opt.setAttribute('data-color', s.color);
     select.appendChild(opt);
   });
+
+  // Add event listener to update color when subject is selected
+  select.onchange = function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const color = selectedOption.getAttribute('data-color');
+    if (color) {
+      document.getElementById('event-color').value = color;
+      console.log(`🎨 Color updated to ${color} for subject ${selectedOption.value}`);
+    }
+  };
 
   console.log('✅ Event select updated');
 }
