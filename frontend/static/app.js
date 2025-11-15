@@ -11,7 +11,7 @@ window.toggleMobileMenu = function() {
 
 // ============= SIMPLE MODAL SYSTEM (No Alpine) =============
 const modals = {
-  event: { open: false, editId: null, form: {} },
+  event: { open: false, editId: null, form: {}, subjects: [] },
   subject: { open: false, editId: null, form: {} },
   schedule: { open: false, editId: null, form: {}, subjects: [] }
 };
@@ -19,32 +19,59 @@ const modals = {
 window.openModal = function(modalId) {
   const modalKey = modalId.replace('-modal', '');
   const modal = modals[modalKey];
-  
+
   if (!modal) {
     console.error(`Modal ${modalId} not found`);
     return;
   }
-  
+
   // Reset form
   modal.editId = null;
   modal.form = modalKey === 'subject' ? { name: '', color: '#3b82f6', description: '' } :
                 modalKey === 'schedule' ? { subject_id: '', day_of_week: 0, start_time: '09:00', end_time: '10:00', active: true } :
                 { title: '', subject: '', start: '', end: '', color: '#3b82f6', description: '' };
-  
-  // Load subjects for schedule modal
-  if (modalKey === 'schedule') {
-    console.log('🔄 Loading subjects for schedule modal...');
-    
+
+  // Load subjects for event modal
+  if (modalKey === 'event') {
+    console.log('🔄 Loading subjects for event modal...');
+
     // Show modal first to ensure DOM is ready
     modal.open = true;
     const el = document.getElementById(modalId);
     if (el) el.classList.remove('hidden');
-    
+
     // Then load subjects
     axios.get('/api/subjects').then(res => {
       modal.subjects = res.data;
       console.log(`✅ Loaded ${res.data.length} subjects:`, res.data);
-      
+
+      // Wait a tiny bit to ensure DOM is fully rendered
+      setTimeout(() => {
+        updateEventSelectOptions();
+      }, 50);
+    }).catch(err => {
+      console.error('❌ Error loading subjects:', err);
+      alert('Erro ao carregar matérias. Verifique se há matérias cadastradas.');
+    });
+
+    console.log(`✅ Opened ${modalId}`);
+    return; // Don't continue to the generic show modal code below
+  }
+
+  // Load subjects for schedule modal
+  if (modalKey === 'schedule') {
+    console.log('🔄 Loading subjects for schedule modal...');
+
+    // Show modal first to ensure DOM is ready
+    modal.open = true;
+    const el = document.getElementById(modalId);
+    if (el) el.classList.remove('hidden');
+
+    // Then load subjects
+    axios.get('/api/subjects').then(res => {
+      modal.subjects = res.data;
+      console.log(`✅ Loaded ${res.data.length} subjects:`, res.data);
+
       // Wait a tiny bit to ensure DOM is fully rendered
       setTimeout(() => {
         updateScheduleSelectOptions();
@@ -53,16 +80,16 @@ window.openModal = function(modalId) {
       console.error('❌ Error loading subjects:', err);
       alert('Erro ao carregar matérias. Verifique se há matérias cadastradas.');
     });
-    
+
     console.log(`✅ Opened ${modalId}`);
     return; // Don't continue to the generic show modal code below
   }
-  
+
   // Show modal (for non-schedule modals)
   modal.open = true;
   const el = document.getElementById(modalId);
   if (el) el.classList.remove('hidden');
-  
+
   console.log(`✅ Opened ${modalId}`);
 }
 
@@ -221,21 +248,22 @@ window.deleteEvent = async function() {
 }
 
 window.openEventModal = function(dateStr) {
+  // openModal will now load subjects automatically
   openModal('event-modal');
-  
+
   // Set dates based on dateStr
   if (!dateStr) {
     const now = new Date();
-    const startStr = now.getFullYear() + '-' + 
-                     String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(now.getDate()).padStart(2, '0') + 'T' + 
-                     String(now.getHours()).padStart(2, '0') + ':' + 
+    const startStr = now.getFullYear() + '-' +
+                     String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(now.getDate()).padStart(2, '0') + 'T' +
+                     String(now.getHours()).padStart(2, '0') + ':' +
                      String(now.getMinutes()).padStart(2, '0');
     const endTime = new Date(now.getTime() + 60 * 60 * 1000);
-    const endStr = endTime.getFullYear() + '-' + 
-                   String(endTime.getMonth() + 1).padStart(2, '0') + '-' + 
-                   String(endTime.getDate()).padStart(2, '0') + 'T' + 
-                   String(endTime.getHours()).padStart(2, '0') + ':' + 
+    const endStr = endTime.getFullYear() + '-' +
+                   String(endTime.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(endTime.getDate()).padStart(2, '0') + 'T' +
+                   String(endTime.getHours()).padStart(2, '0') + ':' +
                    String(endTime.getMinutes()).padStart(2, '0');
     document.getElementById('event-start').value = startStr;
     document.getElementById('event-end').value = endStr;
@@ -243,32 +271,32 @@ window.openEventModal = function(dateStr) {
     // Already has time
     const d = new Date(dateStr);
     if (!isNaN(d)) {
-      const startStr = d.getFullYear() + '-' + 
-                       String(d.getMonth() + 1).padStart(2, '0') + '-' + 
-                       String(d.getDate()).padStart(2, '0') + 'T' + 
-                       String(d.getHours()).padStart(2, '0') + ':' + 
+      const startStr = d.getFullYear() + '-' +
+                       String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(d.getDate()).padStart(2, '0') + 'T' +
+                       String(d.getHours()).padStart(2, '0') + ':' +
                        String(d.getMinutes()).padStart(2, '0');
       const d2 = new Date(d.getTime() + 60 * 60 * 1000);
-      const endStr = d2.getFullYear() + '-' + 
-                     String(d2.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(d2.getDate()).padStart(2, '0') + 'T' + 
-                     String(d2.getHours()).padStart(2, '0') + ':' + 
+      const endStr = d2.getFullYear() + '-' +
+                     String(d2.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(d2.getDate()).padStart(2, '0') + 'T' +
+                     String(d2.getHours()).padStart(2, '0') + ':' +
                      String(d2.getMinutes()).padStart(2, '0');
       document.getElementById('event-start').value = startStr;
       document.getElementById('event-end').value = endStr;
     } else {
       // Fallback to current time
       const now = new Date();
-      const startStr = now.getFullYear() + '-' + 
-                       String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                       String(now.getDate()).padStart(2, '0') + 'T' + 
-                       String(now.getHours()).padStart(2, '0') + ':' + 
+      const startStr = now.getFullYear() + '-' +
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(now.getDate()).padStart(2, '0') + 'T' +
+                       String(now.getHours()).padStart(2, '0') + ':' +
                        String(now.getMinutes()).padStart(2, '0');
       const endTime = new Date(now.getTime() + 60 * 60 * 1000);
-      const endStr = endTime.getFullYear() + '-' + 
-                     String(endTime.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(endTime.getDate()).padStart(2, '0') + 'T' + 
-                     String(endTime.getHours()).padStart(2, '0') + ':' + 
+      const endStr = endTime.getFullYear() + '-' +
+                     String(endTime.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(endTime.getDate()).padStart(2, '0') + 'T' +
+                     String(endTime.getHours()).padStart(2, '0') + ':' +
                      String(endTime.getMinutes()).padStart(2, '0');
       document.getElementById('event-start').value = startStr;
       document.getElementById('event-end').value = endStr;
@@ -280,7 +308,7 @@ window.openEventModal = function(dateStr) {
     document.getElementById('event-start').value = startStr;
     document.getElementById('event-end').value = endStr;
   }
-  
+
   console.log('🗓️ Event modal opened with start:', document.getElementById('event-start').value);
 }
 
@@ -397,9 +425,9 @@ function updateScheduleSelectOptions() {
     console.error('❌ Select schedule-subject not found!');
     return;
   }
-  
+
   console.log(`📋 Updating schedule select with ${modals.schedule.subjects.length} subjects`);
-  
+
   select.innerHTML = '<option value="">Selecione uma matéria</option>';
   modals.schedule.subjects.forEach(s => {
     const opt = document.createElement('option');
@@ -407,8 +435,28 @@ function updateScheduleSelectOptions() {
     opt.textContent = s.name;
     select.appendChild(opt);
   });
-  
+
   console.log('✅ Schedule select updated');
+}
+
+function updateEventSelectOptions() {
+  const select = document.getElementById('event-subject');
+  if (!select) {
+    console.error('❌ Select event-subject not found!');
+    return;
+  }
+
+  console.log(`📋 Updating event select with ${modals.event.subjects.length} subjects`);
+
+  select.innerHTML = '<option value="">Selecione uma matéria</option>';
+  modals.event.subjects.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.name;
+    opt.textContent = s.name;
+    select.appendChild(opt);
+  });
+
+  console.log('✅ Event select updated');
 }
 
 // ============= TABS =============
